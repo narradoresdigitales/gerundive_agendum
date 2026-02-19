@@ -48,16 +48,12 @@ main_container = st.empty()
 # -------------------------
 if "user_id" not in st.session_state:
     st.session_state.user_id = None
-if "action" not in st.session_state:
-    st.session_state.action = None  # Stores action to trigger rerun safely
 
-# -------------------------
-# Top-level deferred rerun
-# -------------------------
-if st.session_state.action:
-    st.session_state.action = None
-    st.experimental_rerun()  # safe rerun at top-level
-    st.stop()
+# Flags for tracking UI changes (no rerun needed)
+if "added_task" not in st.session_state:
+    st.session_state.added_task = False
+if "action_performed" not in st.session_state:
+    st.session_state.action_performed = False
 
 # -------------------------
 # Login Section
@@ -69,8 +65,7 @@ if st.session_state.user_id is None:
         if st.button("Login", key="login_button"):
             if username.strip():
                 st.session_state.user_id = username.strip()
-                st.session_state.action = "login"
-    st.stop()  # halt everything else until logged in
+    st.stop()  # stop rendering main app until logged in
 
 # -------------------------
 # Main App Section
@@ -83,7 +78,7 @@ with main_container.container():
     st.write("")
     if st.button("Logout", key="logout_button"):
         st.session_state.user_id = None
-        st.session_state.action = "logout"
+        st.stop()  # safely stop after logout
 
     st.write("")
     st.subheader("Add Task")
@@ -98,7 +93,8 @@ with main_container.container():
     if st.button("Add Task", key="add_task_button"):
         if new_task.strip():
             add_task(new_task.strip(), user_id)
-            st.session_state.action = "add"
+            st.session_state.added_task = True
+            st.session_state.add_task_input = ""  # clear input
 
     st.divider()
     st.write("")
@@ -116,11 +112,11 @@ with main_container.container():
             with cols[0]:
                 if st.button("➡ Doing", key=f"todo_move_{task_id}"):
                     update_status(task_id, "doing")
-                    st.session_state.action = f"move_{task_id}"
+                    st.session_state.action_performed = True
             with cols[1]:
                 if st.button("❌ Delete", key=f"todo_delete_{task_id}"):
                     delete_task(task_id)
-                    st.session_state.action = f"delete_{task_id}"
+                    st.session_state.action_performed = True
 
     # --- DOING ---
     with col2:
@@ -132,11 +128,11 @@ with main_container.container():
             with cols[0]:
                 if st.button("➡ Done", key=f"doing_move_{task_id}"):
                     update_status(task_id, "done")
-                    st.session_state.action = f"move_{task_id}"
+                    st.session_state.action_performed = True
             with cols[1]:
                 if st.button("❌ Delete", key=f"doing_delete_{task_id}"):
                     delete_task(task_id)
-                    st.session_state.action = f"delete_{task_id}"
+                    st.session_state.action_performed = True
 
     # --- DONE ---
     with col3:
@@ -148,8 +144,8 @@ with main_container.container():
             with cols[0]:
                 if st.button("⬅ Doing", key=f"done_move_{task_id}"):
                     update_status(task_id, "doing")
-                    st.session_state.action = f"move_{task_id}"
+                    st.session_state.action_performed = True
             with cols[1]:
                 if st.button("❌ Delete", key=f"done_delete_{task_id}"):
                     delete_task(task_id)
-                    st.session_state.action = f"delete_{task_id}"
+                    st.session_state.action_performed = True
