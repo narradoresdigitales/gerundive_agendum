@@ -54,7 +54,7 @@ user_id = st.session_state.user_id
 # Header
 # --------------------------------------------------
 
-st.title(f"Sil-workflow — {user_id}")
+st.title(f"workflow — {user_id}")
 
 if st.button("Logout"):
     st.session_state.user_id = None
