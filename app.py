@@ -72,7 +72,7 @@ with main_container.container():
     # Header + Logout
     col_title, col_logout = st.columns([6, 1])
     with col_title:
-        st.title(f"Sil-workflow — {user_id}")
+        st.title(f"Workflow — {user_id}")
     with col_logout:
         if st.button("Logout"):
             st.session_state.user_id = None
