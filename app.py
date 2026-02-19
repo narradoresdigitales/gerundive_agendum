@@ -48,8 +48,16 @@ main_container = st.empty()
 # -------------------------
 if "user_id" not in st.session_state:
     st.session_state.user_id = None
-if "rerun_needed" not in st.session_state:
-    st.session_state.rerun_needed = False
+if "action" not in st.session_state:
+    st.session_state.action = None  # Stores action to trigger rerun safely
+
+# -------------------------
+# Top-level deferred rerun
+# -------------------------
+if st.session_state.action:
+    st.session_state.action = None
+    st.experimental_rerun()  # safe rerun at top-level
+    st.stop()
 
 # -------------------------
 # Login Section
@@ -61,7 +69,7 @@ if st.session_state.user_id is None:
         if st.button("Login", key="login_button"):
             if username.strip():
                 st.session_state.user_id = username.strip()
-                st.session_state.rerun_needed = True
+                st.session_state.action = "login"
     st.stop()  # halt everything else until logged in
 
 # -------------------------
@@ -75,7 +83,7 @@ with main_container.container():
     st.write("")
     if st.button("Logout", key="logout_button"):
         st.session_state.user_id = None
-        st.session_state.rerun_needed = True
+        st.session_state.action = "logout"
 
     st.write("")
     st.subheader("Add Task")
@@ -90,7 +98,7 @@ with main_container.container():
     if st.button("Add Task", key="add_task_button"):
         if new_task.strip():
             add_task(new_task.strip(), user_id)
-            st.session_state.rerun_needed = True  # deferred rerun
+            st.session_state.action = "add"
 
     st.divider()
     st.write("")
@@ -108,11 +116,11 @@ with main_container.container():
             with cols[0]:
                 if st.button("➡ Doing", key=f"todo_move_{task_id}"):
                     update_status(task_id, "doing")
-                    st.session_state.rerun_needed = True
+                    st.session_state.action = f"move_{task_id}"
             with cols[1]:
                 if st.button("❌ Delete", key=f"todo_delete_{task_id}"):
                     delete_task(task_id)
-                    st.session_state.rerun_needed = True
+                    st.session_state.action = f"delete_{task_id}"
 
     # --- DOING ---
     with col2:
@@ -124,11 +132,11 @@ with main_container.container():
             with cols[0]:
                 if st.button("➡ Done", key=f"doing_move_{task_id}"):
                     update_status(task_id, "done")
-                    st.session_state.rerun_needed = True
+                    st.session_state.action = f"move_{task_id}"
             with cols[1]:
                 if st.button("❌ Delete", key=f"doing_delete_{task_id}"):
                     delete_task(task_id)
-                    st.session_state.rerun_needed = True
+                    st.session_state.action = f"delete_{task_id}"
 
     # --- DONE ---
     with col3:
@@ -140,15 +148,8 @@ with main_container.container():
             with cols[0]:
                 if st.button("⬅ Doing", key=f"done_move_{task_id}"):
                     update_status(task_id, "doing")
-                    st.session_state.rerun_needed = True
+                    st.session_state.action = f"move_{task_id}"
             with cols[1]:
                 if st.button("❌ Delete", key=f"done_delete_{task_id}"):
                     delete_task(task_id)
-                    st.session_state.rerun_needed = True
-
-# -------------------------
-# Deferred Rerun
-# -------------------------
-if st.session_state.rerun_needed:
-    st.session_state.rerun_needed = False
-    st.experimental_rerun()
+                    st.session_state.action = f"delete_{task_id}"
