@@ -13,7 +13,13 @@ STATUSES = {
 ACTIONS = {
     "todo":        {"label": "Start ▶", "next": "in_progress"},
     "in_progress": {"label": "Complete ✓", "next": "done"},
-    "done":        {"label": "Reopen ↺", "next": "in_progress"},  # ← change to "todo" if preferred
+    "done":        {"label": "Reopen ↺", "next": "in_progress"},  # change to "todo" if you prefer
+}
+
+PRIORITY_COLORS = {
+    "high":   {"border": "#dc3545", "bg": "#f8d7da", "text": "#721c24", "label": "High 🚨"},
+    "medium": {"border": "#0d6efd", "bg": "#d1e7ff", "text": "#084298", "label": "Medium"},
+    "low":    {"border": "#ffc107", "bg": "#fff3cd", "text": "#664d03", "label": "Low"},
 }
 
 # ────────────────────────────────────────────────
@@ -44,9 +50,24 @@ st.markdown("""
         margin-bottom: 12px;
         border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.07);
-        border-left: 4px solid #4a90e2;
         font-size: 1.05rem;
+        position: relative;
+        overflow: hidden;
     }
+    .task-card.high   { border-left: 5px solid #dc3545; background: #fff5f5; }
+    .task-card.medium { border-left: 5px solid #0d6efd; background: #f0f8ff; }
+    .task-card.low    { border-left: 5px solid #ffc107; background: #fffef0; }
+    .priority-badge {
+        font-size: 0.8rem;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-weight: 600;
+        display: inline-block;
+        margin-bottom: 6px;
+    }
+    .priority-high   { background: #dc3545; color: white; }
+    .priority-medium { background: #0d6efd; color: white; }
+    .priority-low    { background: #ffc107; color: #212529; }
     .empty-hint {
         color: #6c757d;
         font-style: italic;
@@ -57,13 +78,16 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ────────────────────────────────────────────────
-# Session state init
+# Session state
 # ────────────────────────────────────────────────
 if "user_id" not in st.session_state:
     st.session_state.user_id = None
 
 if "new_task_text" not in st.session_state:
     st.session_state.new_task_text = ""
+
+if "new_task_priority" not in st.session_state:
+    st.session_state.new_task_priority = "medium"
 
 # ────────────────────────────────────────────────
 # Login
@@ -92,10 +116,10 @@ with c2:
 
 st.divider()
 
-# ── Add task (non-form style – most reliable in many cases) ────────
+# ── Add task ────────────────────────────────────────────────
 st.subheader("Add New Task")
 
-col_input, col_btn = st.columns([5, 2])
+col_input, col_prio, col_btn = st.columns([4, 2, 2])
 
 with col_input:
     st.session_state.new_task_text = st.text_input(
@@ -106,6 +130,16 @@ with col_input:
         key="add_task_input"
     )
 
+with col_prio:
+    st.session_state.new_task_priority = st.selectbox(
+        "Priority",
+        options=["high", "medium", "low"],
+        format_func=lambda x: PRIORITY_COLORS[x]["label"],
+        index=["high", "medium", "low"].index(st.session_state.new_task_priority),
+        label_visibility="collapsed",
+        key="add_task_priority"
+    )
+
 with col_btn:
     if st.button(
         "➕ Add",
@@ -114,13 +148,15 @@ with col_btn:
         disabled=not st.session_state.new_task_text.strip()
     ):
         cleaned = st.session_state.new_task_text.strip()
+        prio = st.session_state.new_task_priority
         try:
-            add_task(cleaned, user_id)
-            st.success(f"Added: **{cleaned}**", icon="✅")
-            st.session_state.new_task_text = ""           # clear input
+            add_task(cleaned, user_id, priority=prio)  # ← assumes add_task accepts priority
+            st.success(f"Added: **{cleaned}** ({PRIORITY_COLORS[prio]['label']})", icon="✅")
+            st.session_state.new_task_text = ""
+            st.session_state.new_task_priority = "medium"
             st.rerun()
         except Exception as e:
-            st.error(f"Error adding task: {e}")
+            st.error(f"Error: {e}")
 
 st.divider()
 
@@ -133,14 +169,28 @@ for i, (status_key, display_name) in enumerate(STATUSES.items()):
     with cols[i]:
         st.markdown(f'<div class="column-header">{display_name}</div>', unsafe_allow_html=True)
 
+        # Assuming get_tasks now returns (id, title, priority)
         tasks = get_tasks(status_key, user_id)
 
         if not tasks:
             st.markdown('<div class="empty-hint">— nothing here yet —</div>', unsafe_allow_html=True)
             continue
 
-        for task_id, title in tasks:
-            st.markdown(f'<div class="task-card">{title}</div>', unsafe_allow_html=True)
+        for row in tasks:
+            task_id, title, priority = row if len(row) == 3 else (row[0], row[1], "medium")  # fallback
+
+            prio_style = PRIORITY_COLORS.get(priority, PRIORITY_COLORS["medium"])
+            badge_class = f"priority-{priority}"
+
+            st.markdown(
+                f'''
+                <div class="task-card {priority}">
+                    <div class="priority-badge {badge_class}">{prio_style["label"]}</div>
+                    {title}
+                </div>
+                ''',
+                unsafe_allow_html=True
+            )
 
             b1, b2 = st.columns(2)
 
@@ -155,7 +205,7 @@ for i, (status_key, display_name) in enumerate(STATUSES.items()):
                         update_status(task_id, action["next"])
                         st.rerun()
                     except Exception as e:
-                        st.error(f"Error updating status: {e}")
+                        st.error(f"Error: {e}")
 
             with b2:
                 if st.button(
@@ -167,6 +217,6 @@ for i, (status_key, display_name) in enumerate(STATUSES.items()):
                         delete_task(task_id)
                         st.rerun()
                     except Exception as e:
-                        st.error(f"Error deleting task: {e}")
+                        st.error(f"Error: {e}")
 
 st.markdown("<br><br>", unsafe_allow_html=True)
