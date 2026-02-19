@@ -121,7 +121,7 @@ with main_container.container():
 
     # Doing
     with col_doing:
-        st.markdown('<div class="column-header">⚡ Doing</div>', unsafe_allow_html=True)
+        st.markdown('<div class="column-header">⚡ In progress ... </div>', unsafe_allow_html=True)
         tasks = get_tasks("In_progress", user_id)
         for task_id, title in tasks:
             st.markdown(f'<div class="task-card">{title}</div>', unsafe_allow_html=True)
