@@ -7,6 +7,10 @@ from database import (
     delete_task
 )
 
+# --------------------------------------------------
+# Page Setup
+# --------------------------------------------------
+
 st.set_page_config(
     page_title="Sil-workflow",
     layout="wide"
@@ -14,9 +18,21 @@ st.set_page_config(
 
 init_db()
 
-# ------------------------------
-# User Session
-# ------------------------------
+# --------------------------------------------------
+# Subtle Page Background Contrast
+# --------------------------------------------------
+
+st.markdown("""
+<style>
+.stApp {
+    background-color: #f4f6f8;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# --------------------------------------------------
+# User Session Handling
+# --------------------------------------------------
 
 if "user_id" not in st.session_state:
     st.session_state.user_id = None
@@ -29,31 +45,14 @@ if st.session_state.user_id is None:
         if username.strip():
             st.session_state.user_id = username.strip()
             st.rerun()
+
     st.stop()
 
 user_id = st.session_state.user_id
 
-# ------------------------------
-# Styling
-# ------------------------------
-
-st.markdown("""
-    <style>
-    .stApp {
-        background-color: #f4f6f8;
-    }
-    .column-container {
-        background-color: #e9edf2;
-        padding: 20px;
-        border-radius: 10px;
-        min-height: 500px;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
-# ------------------------------
+# --------------------------------------------------
 # Header
-# ------------------------------
+# --------------------------------------------------
 
 st.title(f"Sil-workflow — {user_id}")
 
@@ -61,12 +60,12 @@ if st.button("Logout"):
     st.session_state.user_id = None
     st.rerun()
 
-# ------------------------------
-# Add Task
-# ------------------------------
+# --------------------------------------------------
+# Add Task Section
+# --------------------------------------------------
 
 st.subheader("Add Task")
-new_task = st.text_input("Task name")
+new_task = st.text_input("Task name", placeholder="Enter new task...")
 
 if st.button("Add Task"):
     if new_task.strip():
@@ -75,21 +74,20 @@ if st.button("Add Task"):
 
 st.divider()
 
-# ------------------------------
-# Columns
-# ------------------------------
+# --------------------------------------------------
+# Kanban Columns
+# --------------------------------------------------
 
 col1, col2, col3 = st.columns(3)
 
-# --- TO DO ---
+# ---------------- TO DO ----------------
 with col1:
-    st.markdown('<div class="column-container">', unsafe_allow_html=True)
-    st.header("To Do")
+    st.header("📝 To Do")
 
     tasks = get_tasks("todo", user_id)
 
     for task_id, title in tasks:
-        st.write(title)
+        st.markdown(f"**{title}**")
 
         if st.button("➡ Move to Doing", key=f"todo_move_{task_id}"):
             update_status(task_id, "doing")
@@ -101,17 +99,14 @@ with col1:
 
         st.divider()
 
-    st.markdown('</div>', unsafe_allow_html=True)
-
-# --- DOING ---
+# ---------------- DOING ----------------
 with col2:
-    st.markdown('<div class="column-container">', unsafe_allow_html=True)
-    st.header("Doing")
+    st.header("⚡ Doing")
 
     tasks = get_tasks("doing", user_id)
 
     for task_id, title in tasks:
-        st.write(title)
+        st.markdown(f"**{title}**")
 
         if st.button("➡ Move to Done", key=f"doing_move_{task_id}"):
             update_status(task_id, "done")
@@ -123,17 +118,14 @@ with col2:
 
         st.divider()
 
-    st.markdown('</div>', unsafe_allow_html=True)
-
-# --- DONE ---
+# ---------------- DONE ----------------
 with col3:
-    st.markdown('<div class="column-container">', unsafe_allow_html=True)
-    st.header("Done")
+    st.header("✅ Done")
 
     tasks = get_tasks("done", user_id)
 
     for task_id, title in tasks:
-        st.write(title)
+        st.markdown(f"**{title}**")
 
         if st.button("⬅ Move to Doing", key=f"done_move_{task_id}"):
             update_status(task_id, "doing")
@@ -144,5 +136,3 @@ with col3:
             st.rerun()
 
         st.divider()
-
-    st.markdown('</div>', unsafe_allow_html=True)
