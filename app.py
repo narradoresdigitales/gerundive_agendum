@@ -5,19 +5,19 @@ from database import init_db, add_task, get_tasks, update_status, delete_task
 # Constants
 # ────────────────────────────────────────────────
 STATUSES = {
-    "todo": "📝 To Do",
+    "todo":        "📝 To Do",
     "in_progress": "⚡ In Progress",
-    "done": "✅ Done"
+    "done":        "✅ Done"
 }
 
-ACTION_LABELS = {
-    "todo":        ("Start ▶", "in_progress"),
-    "in_progress": ("Complete ✓", "done"),
-    "done":        ("Reopen ↺", "in_progress"),   # or "todo" if preferred
+ACTIONS = {
+    "todo":        {"label": "Start ▶", "next": "in_progress"},
+    "in_progress": {"label": "Complete ✓", "next": "done"},
+    "done":        {"label": "Reopen ↺", "next": "in_progress"},  # ← change to "todo" if preferred
 }
 
 # ────────────────────────────────────────────────
-# Page & DB setup
+# Setup
 # ────────────────────────────────────────────────
 st.set_page_config(page_title="Workflow", layout="wide")
 init_db()
@@ -57,10 +57,13 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ────────────────────────────────────────────────
-# Session state
+# Session state init
 # ────────────────────────────────────────────────
 if "user_id" not in st.session_state:
     st.session_state.user_id = None
+
+if "new_task_text" not in st.session_state:
+    st.session_state.new_task_text = ""
 
 # ────────────────────────────────────────────────
 # Login
@@ -74,7 +77,7 @@ if st.session_state.user_id is None:
     st.stop()
 
 # ────────────────────────────────────────────────
-# Main interface
+# Main app
 # ────────────────────────────────────────────────
 user_id = st.session_state.user_id
 
@@ -89,40 +92,46 @@ with c2:
 
 st.divider()
 
-# ── Add task form ────────────────────────────────────
-with st.form(key="add_task", clear_on_submit=True):
-    st.subheader("Add New Task")
-    col_input, col_btn = st.columns([5, 2])
-    with col_input:
-        task_input = st.text_input(
-            "Task",
-            placeholder="What needs to be done? …",
-            label_visibility="collapsed"
-        )
-    with col_btn:
-        submitted = st.form_submit_button(
-            "➕ Add",
-            type="primary",
-            use_container_width=True,
-            disabled=not task_input.strip()
-        )
+# ── Add task (non-form style – most reliable in many cases) ────────
+st.subheader("Add New Task")
 
-# Handle submission **outside** the form context → fixes disappearing value issue
-if submitted and (cleaned_task := task_input.strip()):
-    add_task(cleaned_task, user_id)
-    st.success(f"Added **{cleaned_task}**", icon="✅")
-    st.rerun()
+col_input, col_btn = st.columns([5, 2])
+
+with col_input:
+    st.session_state.new_task_text = st.text_input(
+        "Task description",
+        value=st.session_state.new_task_text,
+        placeholder="What needs to be done? …",
+        label_visibility="collapsed",
+        key="add_task_input"
+    )
+
+with col_btn:
+    if st.button(
+        "➕ Add",
+        type="primary",
+        use_container_width=True,
+        disabled=not st.session_state.new_task_text.strip()
+    ):
+        cleaned = st.session_state.new_task_text.strip()
+        try:
+            add_task(cleaned, user_id)
+            st.success(f"Added: **{cleaned}**", icon="✅")
+            st.session_state.new_task_text = ""           # clear input
+            st.rerun()
+        except Exception as e:
+            st.error(f"Error adding task: {e}")
 
 st.divider()
 
 # ── Kanban board ─────────────────────────────────────
 st.subheader("Tasks")
 
-columns = st.columns(3)
+cols = st.columns(3)
 
-for idx, (status_key, header_text) in enumerate(STATUSES.items()):
-    with columns[idx]:
-        st.markdown(f'<div class="column-header">{header_text}</div>', unsafe_allow_html=True)
+for i, (status_key, display_name) in enumerate(STATUSES.items()):
+    with cols[i]:
+        st.markdown(f'<div class="column-header">{display_name}</div>', unsafe_allow_html=True)
 
         tasks = get_tasks(status_key, user_id)
 
@@ -133,17 +142,31 @@ for idx, (status_key, header_text) in enumerate(STATUSES.items()):
         for task_id, title in tasks:
             st.markdown(f'<div class="task-card">{title}</div>', unsafe_allow_html=True)
 
-            btn1, btn2 = st.columns(2)
+            b1, b2 = st.columns(2)
 
-            with btn1:
-                label, next_status = ACTION_LABELS[status_key]
-                if st.button(label, key=f"action_{status_key}_{task_id}", use_container_width=True):
-                    update_status(task_id, next_status)
-                    st.rerun()
+            with b1:
+                action = ACTIONS[status_key]
+                if st.button(
+                    action["label"],
+                    key=f"act_{status_key}_{task_id}",
+                    use_container_width=True
+                ):
+                    try:
+                        update_status(task_id, action["next"])
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Error updating status: {e}")
 
-            with btn2:
-                if st.button("🗑 Delete", key=f"delete_{task_id}", use_container_width=True):
-                    delete_task(task_id)
-                    st.rerun()
+            with b2:
+                if st.button(
+                    "🗑 Delete",
+                    key=f"del_{task_id}",
+                    use_container_width=True
+                ):
+                    try:
+                        delete_task(task_id)
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Error deleting task: {e}")
 
-st.markdown("<br>", unsafe_allow_html=True)
+st.markdown("<br><br>", unsafe_allow_html=True)
