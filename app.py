@@ -100,7 +100,7 @@ with main_container.container():
     st.divider()
 
     # ── Kanban Board ────────────────────────────────────────────
-    st.subheader("To be done")
+    st.subheader("Quid agendum est?")
     col_todo, col_doing, col_done = st.columns(3)
 
     # To Do
