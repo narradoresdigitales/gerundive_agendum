@@ -1,154 +1,148 @@
 import streamlit as st
-from database import (
-    init_db,
-    add_task,
-    get_tasks,
-    update_status,
-    delete_task
-)
+from database import init_db, add_task, get_tasks, update_status, delete_task
 
-# ─────────────────────────────────────────────────────────────
-# Page Setup
-# ─────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────
+# Constants
+# ────────────────────────────────────────────────
+STATUSES = {
+    "todo":        "📝 To Do",
+    "in_progress": "⚡ In Progress",
+    "done":        "✅ Done"
+}
+
+# ────────────────────────────────────────────────
+# Page config & DB init
+# ────────────────────────────────────────────────
 st.set_page_config(page_title="Workflow", layout="wide")
 init_db()
 
-# ─────────────────────────────────────────────────────────────
-# CSS Styling
-# ─────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────
+# Styling
+# ────────────────────────────────────────────────
 st.markdown("""
-<style>
-    .stApp { background-color: #f4f6f8; }
-    .column-header {
-        background-color: #4a90e2;
-        color: white;
-        padding: 10px;
-        border-radius: 6px;
-        text-align: center;
-        font-weight: bold;
-        margin-bottom: 12px;
-    }
-    .task-card {
-        background-color: white;
-        padding: 12px;
-        margin-bottom: 10px;
-        border-radius: 8px;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-        font-size: 1rem;
-    }
-</style>
+    <style>
+        .stApp { background-color: #f8f9fc; }
+        .column-header {
+            background-color: #4a90e2;
+            color: white;
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: bold;
+            margin: 0 0 16px 0;
+            font-size: 1.15rem;
+        }
+        .task-card {
+            background: white;
+            padding: 14px 16px;
+            margin-bottom: 12px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+            border-left: 4px solid #4a90e2;
+            font-size: 1.05rem;
+        }
+        .stButton > button { font-size: 0.95rem; }
+    </style>
 """, unsafe_allow_html=True)
 
-# ─────────────────────────────────────────────────────────────
-# Session State
-# ─────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────
+# Session state
+# ────────────────────────────────────────────────
 if "user_id" not in st.session_state:
     st.session_state.user_id = None
 
-# Containers
-login_container = st.empty()
-main_container = st.empty()
-
-# ─────────────────────────────────────────────────────────────
-# Login
-# ─────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────
+# Login screen
+# ────────────────────────────────────────────────
 if st.session_state.user_id is None:
-    with login_container.container():
-        st.title("Workflow")
-        username = st.text_input("Username", placeholder="Enter your username...")
-        if st.button("Login", type="primary"):
-            cleaned = username.strip()
-            if cleaned:
-                st.session_state.user_id = cleaned
-                st.rerun()
+    st.title("Workflow")
+    username = st.text_input("Username", placeholder="your name or nickname…", max_chars=50)
+    if st.button("Login", type="primary", use_container_width=True) and username.strip():
+        st.session_state.user_id = username.strip()
+        st.rerun()
     st.stop()
 
-# ─────────────────────────────────────────────────────────────
-# Main Application
-# ─────────────────────────────────────────────────────────────
-with main_container.container():
-    user_id = st.session_state.user_id
+# ────────────────────────────────────────────────
+# Main app
+# ────────────────────────────────────────────────
+user_id = st.session_state.user_id
 
-    # Header + Logout
-    col_title, col_logout = st.columns([6, 1])
-    with col_title:
-        st.title(f"Workflow — {user_id}")
-    with col_logout:
-        if st.button("Logout"):
-            st.session_state.user_id = None
-            st.rerun()
+# Header + Logout
+col1, col2 = st.columns([9, 1])
+with col1:
+    st.title(f"Workflow  —  {user_id}")
+with col2:
+    if st.button("Logout", use_container_width=True):
+        st.session_state.user_id = None
+        st.rerun()
 
-    st.divider()
+st.divider()
 
-    # ── Add Task Form ───────────────────────────────────────────
-    with st.form(key="add_task_form", clear_on_submit=True):
-        st.subheader("Add New Task")
+# ── Add task ─────────────────────────────────────
+with st.form("add_task_form", clear_on_submit=True):
+    st.subheader("Add New Task")
+    col_a, col_b = st.columns([5, 2])
+    with col_a:
         new_task = st.text_input(
-            "Task name",
-            placeholder="What needs to be done?...",
+            "Task description",
+            placeholder="What needs to be done? …",
+            label_visibility="collapsed",
             key="new_task_input"
         )
-        submitted = st.form_submit_button("Add Task", type="primary", use_container_width=True)
+    with col_b:
+        submitted = st.form_submit_button(
+            "➕ Add",
+            type="primary",
+            use_container_width=True,
+            disabled=not new_task.strip()
+        )
 
-    if submitted:
-        cleaned_task = new_task.strip()
-        if cleaned_task:
-            add_task(cleaned_task, user_id)
-            st.success(f"Added: **{cleaned_task}**", icon="✅")
-            st.rerun()
+if submitted and (cleaned := new_task.strip()):
+    add_task(cleaned, user_id)
+    st.success(f"Task added: **{cleaned}**", icon="✅")
+    st.rerun()
 
-    st.divider()
+st.divider()
 
-    # ── Kanban Board ────────────────────────────────────────────
-    st.subheader("Quid agendum est?")
-    col_todo, col_doing, col_done = st.columns(3)
+# ── Kanban board ─────────────────────────────────
+st.subheader("Your Tasks")
 
-    # To Do
-    with col_todo:
-        st.markdown('<div class="column-header">📝 To Do</div>', unsafe_allow_html=True)
-        tasks = get_tasks("todo", user_id)
+cols = st.columns(3)
+
+for status_key, header_text in STATUSES.items():
+    with cols[list(STATUSES.keys()).index(status_key)]:
+        st.markdown(f'<div class="column-header">{header_text}</div>', unsafe_allow_html=True)
+
+        tasks = get_tasks(status_key, user_id)
+
+        if not tasks:
+            st.caption("— nothing here yet —")
+            continue
+
         for task_id, title in tasks:
             st.markdown(f'<div class="task-card">{title}</div>', unsafe_allow_html=True)
-            b1, b2 = st.columns(2)
-            with b1:
-                if st.button("➡ Start", key=f"todo_start_{task_id}", use_container_width=True):
-                    update_status(task_id, "in progress ... ")
-                    st.rerun()
-            with b2:
-                if st.button("❌ Delete", key=f"todo_del_{task_id}", use_container_width=True):
+
+            btn_col1, btn_col2 = st.columns(2)
+
+            with btn_col1:
+                if status_key == "todo":
+                    if st.button("Start ▶", key=f"act_start_{task_id}", use_container_width=True):
+                        update_status(task_id, "in_progress")
+                        st.rerun()
+
+                elif status_key == "in_progress":
+                    if st.button("Complete ✓", key=f"act_done_{task_id}", use_container_width=True):
+                        update_status(task_id, "done")
+                        st.rerun()
+
+                elif status_key == "done":
+                    if st.button("Reopen ↺", key=f"act_reopen_{task_id}", use_container_width=True):
+                        update_status(task_id, "in_progress")  # or "todo" — your choice
+                        st.rerun()
+
+            with btn_col2:
+                if st.button("🗑 Delete", key=f"act_del_{task_id}", use_container_width=True):
                     delete_task(task_id)
                     st.rerun()
 
-    # Doing
-    with col_doing:
-        st.markdown('<div class="column-header">⚡ In progress ... </div>', unsafe_allow_html=True)
-        tasks = get_tasks("done", user_id)
-        for task_id, title in tasks:
-            st.markdown(f'<div class="task-card">{title}</div>', unsafe_allow_html=True)
-            b1, b2 = st.columns(2)
-            with b1:
-                if st.button("✓ Done", key=f"_done_{task_id}", use_container_width=True):
-                    update_status(task_id, "done")
-                    st.rerun()
-            with b2:
-                if st.button("❌ Delete", key=f"doing_del_{task_id}", use_container_width=True):
-                    delete_task(task_id)
-                    st.rerun()
-
-    # Done
-    with col_done:
-        st.markdown('<div class="column-header">✅ Done</div>', unsafe_allow_html=True)
-        tasks = get_tasks("done", user_id)
-        for task_id, title in tasks:
-            st.markdown(f'<div class="task-card">{title}</div>', unsafe_allow_html=True)
-            b1, b2 = st.columns(2)
-            with b1:
-                if st.button("⬅ Reopen", key=f"done_reopen_{task_id}", use_container_width=True):
-                    update_status(task_id, "doing")
-                    st.rerun()
-            with b2:
-                if st.button("❌ Delete", key=f"done_del_{task_id}", use_container_width=True):
-                    delete_task(task_id)
-                    st.rerun()
-
-    st.write("")  # bottom spacing
+st.markdown("<br><br>", unsafe_allow_html=True)
