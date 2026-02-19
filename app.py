@@ -38,7 +38,7 @@ if "user_id" not in st.session_state:
     st.session_state.user_id = None
 
 if st.session_state.user_id is None:
-    st.title("Sil-workflow")
+    st.title("workflow")
     username = st.text_input("Enter your username")
 
     if st.button("Enter"):
