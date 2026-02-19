@@ -34,6 +34,11 @@ st.markdown("""
     border-radius: 6px;
     box-shadow: 0px 2px 4px rgba(0,0,0,0.1);
 }
+.task-buttons {
+    display: flex;
+    gap: 5px;
+    margin-top: 5px;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -48,8 +53,6 @@ main_container = st.empty()
 # -------------------------
 if "user_id" not in st.session_state:
     st.session_state.user_id = None
-if "rerun_flag" not in st.session_state:
-    st.session_state.rerun_flag = False
 
 # -------------------------
 # Login
@@ -61,36 +64,32 @@ if st.session_state.user_id is None:
         if st.button("Login", key="login_button"):
             if username.strip():
                 st.session_state.user_id = username.strip()
-                st.experimental_rerun()
+                st.stop()  # stop current run, app reloads logged in
     st.stop()
-
-# -------------------------
-# Helper Function
-# -------------------------
-def handle_action(action_func):
-    action_func()
-    st.session_state.rerun_flag = True
 
 # -------------------------
 # Main App
 # -------------------------
 with main_container.container():
     user_id = st.session_state.user_id
+
+    # Header + Logout
     st.title(f"Sil-workflow — {user_id}")
     st.write("")
-
     if st.button("Logout", key="logout_button"):
         st.session_state.user_id = None
-        st.experimental_rerun()
+        st.stop()
 
     st.write("")
     st.subheader("Add Task")
     st.write("")
 
+    # Add Task Input
     new_task = st.text_input("Task name", key="add_task_input", placeholder="Enter new task...")
     if st.button("Add Task", key="add_task_button"):
         if new_task.strip():
-            handle_action(lambda: add_task(new_task.strip(), user_id))
+            add_task(new_task.strip(), user_id)
+            st.stop()
 
     st.divider()
     st.write("")
@@ -104,10 +103,15 @@ with main_container.container():
         tasks = get_tasks("todo", user_id)
         for task_id, title in tasks:
             st.markdown(f'<div class="task-card">{title}</div>', unsafe_allow_html=True)
-            if st.button("➡ Move to Doing", key=f"todo_move_{task_id}"):
-                handle_action(lambda: update_status(task_id, "doing"))
-            if st.button("❌ Delete", key=f"todo_delete_{task_id}"):
-                handle_action(lambda: delete_task(task_id))
+            cols = st.columns([1,1])
+            with cols[0]:
+                if st.button("➡ Doing", key=f"todo_move_{task_id}"):
+                    update_status(task_id, "doing")
+                    st.stop()
+            with cols[1]:
+                if st.button("❌ Delete", key=f"todo_delete_{task_id}"):
+                    delete_task(task_id)
+                    st.stop()
 
     # --- DOING ---
     with col2:
@@ -115,10 +119,15 @@ with main_container.container():
         tasks = get_tasks("doing", user_id)
         for task_id, title in tasks:
             st.markdown(f'<div class="task-card">{title}</div>', unsafe_allow_html=True)
-            if st.button("➡ Move to Done", key=f"doing_move_{task_id}"):
-                handle_action(lambda: update_status(task_id, "done"))
-            if st.button("❌ Delete", key=f"doing_delete_{task_id}"):
-                handle_action(lambda: delete_task(task_id))
+            cols = st.columns([1,1])
+            with cols[0]:
+                if st.button("➡ Done", key=f"doing_move_{task_id}"):
+                    update_status(task_id, "done")
+                    st.stop()
+            with cols[1]:
+                if st.button("❌ Delete", key=f"doing_delete_{task_id}"):
+                    delete_task(task_id)
+                    st.stop()
 
     # --- DONE ---
     with col3:
@@ -126,14 +135,12 @@ with main_container.container():
         tasks = get_tasks("done", user_id)
         for task_id, title in tasks:
             st.markdown(f'<div class="task-card">{title}</div>', unsafe_allow_html=True)
-            if st.button("⬅ Move to Doing", key=f"done_move_{task_id}"):
-                handle_action(lambda: update_status(task_id, "doing"))
-            if st.button("❌ Delete", key=f"done_delete_{task_id}"):
-                handle_action(lambda: delete_task(task_id))
-
-# -------------------------
-# Trigger Rerun Once After Actions
-# -------------------------
-if st.session_state.rerun_flag:
-    st.session_state.rerun_flag = False
-    st.experimental_rerun()
+            cols = st.columns([1,1])
+            with cols[0]:
+                if st.button("⬅ Doing", key=f"done_move_{task_id}"):
+                    update_status(task_id, "doing")
+                    st.stop()
+            with cols[1]:
+                if st.button("❌ Delete", key=f"done_delete_{task_id}"):
+                    delete_task(task_id)
+                    st.stop()
