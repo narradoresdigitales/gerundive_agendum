@@ -10,146 +10,124 @@ from database import (
 # --------------------------------------------------
 # Page Setup
 # --------------------------------------------------
-
-st.set_page_config(
-    page_title="workflow",
-    layout="wide"
-)
-
+st.set_page_config(page_title="Sil-workflow", layout="wide")
 init_db()
 
 # --------------------------------------------------
-# Subtle Page Background Contrast
+# CSS Styling for Columns & Task Cards
 # --------------------------------------------------
-
 st.markdown("""
 <style>
 .stApp {
     background-color: #f4f6f8;
 }
+.column-header {
+    background-color: #4a90e2;
+    color: white;
+    padding: 8px;
+    border-radius: 5px;
+    text-align: center;
+    font-weight: bold;
+}
+.task-card {
+    background-color: white;
+    padding: 10px;
+    margin-bottom: 8px;
+    border-radius: 6px;
+    box-shadow: 0px 2px 4px rgba(0,0,0,0.1);
+}
 </style>
 """, unsafe_allow_html=True)
 
 # --------------------------------------------------
-# User Session Handling
+# Containers for Login and Main App
 # --------------------------------------------------
+login_container = st.empty()
+main_container = st.empty()
 
+# --------------------------------------------------
+# Session State
+# --------------------------------------------------
 if "user_id" not in st.session_state:
     st.session_state.user_id = None
 
+# ---------- Login ----------
 if st.session_state.user_id is None:
-    st.title("workflow")
-    username = st.text_input("Enter your username")
+    with login_container.container():
+        st.title("Sil-workflow")
+        username = st.text_input("Username", key="login_username")
+        if st.button("Login", key="login_button"):
+            if username.strip():
+                st.session_state.user_id = username.strip()
+                st.experimental_rerun()
+    st.stop()  # stop rendering rest of app until logged in
 
-    if st.button("Enter"):
-        if username.strip():
-            st.session_state.user_id = username.strip()
-            st.rerun()
+# ---------- Main App ----------
+with main_container.container():
+    user_id = st.session_state.user_id
 
-    st.stop()
+    # Header and Logout
+    st.title(f"Sil-workflow — {user_id}")
+    st.write("")
+    if st.button("Logout", key="logout_button"):
+        st.session_state.user_id = None
+        st.experimental_rerun()
 
-user_id = st.session_state.user_id
+    st.write("")
+    st.subheader("Add Task")
+    st.write("")
 
-# --------------------------------------------------
-# Header
-# --------------------------------------------------
+    new_task = st.text_input(
+        "Task name",
+        placeholder="Enter new task...",
+        key="add_task_input"
+    )
+    if st.button("Add Task", key="add_task_button"):
+        if new_task.strip():
+            add_task(new_task.strip(), user_id)
+            st.experimental_rerun()
 
-# Header
-st.title(f"Sil-workflow — {user_id}")
-st.write("")  # small space
-st.write("")  # extra space
-if st.button("Logout"):
-    st.session_state.user_id = None
-    st.rerun()
+    st.divider()
+    st.write("")
 
-st.write("")  # space before Add Task section
-st.subheader("Add Task")
-st.write("")  # space between header and input
-new_task = st.text_input("Task name", placeholder="Enter new task...")
+    # ---------------- Kanban Columns ----------------
+    col1, col2, col3 = st.columns(3)
 
-st.write("")  # space between input and button
-if st.button("Add Task"):
-    if new_task.strip():
-        add_task(new_task.strip(), user_id)
-        st.rerun()
+    # --- TO DO ---
+    with col1:
+        st.markdown('<div class="column-header">📝 To Do</div>', unsafe_allow_html=True)
+        tasks = get_tasks("todo", user_id)
+        for task_id, title in tasks:
+            st.markdown(f'<div class="task-card">{title}</div>', unsafe_allow_html=True)
+            if st.button("➡ Move to Doing", key=f"todo_move_{task_id}"):
+                update_status(task_id, "doing")
+                st.experimental_rerun()
+            if st.button("❌ Delete", key=f"todo_delete_{task_id}"):
+                delete_task(task_id)
+                st.experimental_rerun()
 
-st.divider()
-st.write("")  # extra space before columns
+    # --- DOING ---
+    with col2:
+        st.markdown('<div class="column-header">⚡ Doing</div>', unsafe_allow_html=True)
+        tasks = get_tasks("doing", user_id)
+        for task_id, title in tasks:
+            st.markdown(f'<div class="task-card">{title}</div>', unsafe_allow_html=True)
+            if st.button("➡ Move to Done", key=f"doing_move_{task_id}"):
+                update_status(task_id, "done")
+                st.experimental_rerun()
+            if st.button("❌ Delete", key=f"doing_delete_{task_id}"):
+                delete_task(task_id)
+                st.experimental_rerun()
 
-
-# --------------------------------------------------
-# Add Task Section
-# --------------------------------------------------
-
-st.subheader("Add Task")
-new_task = st.text_input("Task name", placeholder="Enter new task...")
-
-if st.button("Add Task"):
-    if new_task.strip():
-        add_task(new_task.strip(), user_id)
-        st.rerun()
-
-st.divider()
-
-# --------------------------------------------------
-# Kanban Columns
-# --------------------------------------------------
-
-col1, col2, col3 = st.columns(3)
-
-# ---------------- TO DO ----------------
-with col1:
-    st.header("📝 To Do")
-
-    tasks = get_tasks("todo", user_id)
-
-    for task_id, title in tasks:
-        st.markdown(f"**{title}**")
-
-        if st.button("➡ Move to Doing", key=f"todo_move_{task_id}"):
-            update_status(task_id, "doing")
-            st.rerun()
-
-        if st.button("❌ Delete", key=f"todo_delete_{task_id}"):
-            delete_task(task_id)
-            st.rerun()
-
-        st.divider()
-
-# ---------------- DOING ----------------
-with col2:
-    st.header("⚡ Doing")
-
-    tasks = get_tasks("doing", user_id)
-
-    for task_id, title in tasks:
-        st.markdown(f"**{title}**")
-
-        if st.button("➡ Move to Done", key=f"doing_move_{task_id}"):
-            update_status(task_id, "done")
-            st.rerun()
-
-        if st.button("❌ Delete", key=f"doing_delete_{task_id}"):
-            delete_task(task_id)
-            st.rerun()
-
-        st.divider()
-
-# ---------------- DONE ----------------
-with col3:
-    st.header("✅ Done")
-
-    tasks = get_tasks("done", user_id)
-
-    for task_id, title in tasks:
-        st.markdown(f"**{title}**")
-
-        if st.button("⬅ Move to Doing", key=f"done_move_{task_id}"):
-            update_status(task_id, "doing")
-            st.rerun()
-
-        if st.button("❌ Delete", key=f"done_delete_{task_id}"):
-            delete_task(task_id)
-            st.rerun()
-
-        st.divider()
+    # --- DONE ---
+    with col3:
+        st.markdown('<div class="column-header">✅ Done</div>', unsafe_allow_html=True)
+        tasks = get_tasks("done", user_id)
+        for task_id, title in tasks:
+            st.markdown(f'<div class="task-card">{title}</div>', unsafe_allow_html=True)
+            if st.button("⬅ Move to Doing", key=f"done_move_{task_id}"):
+                update_status(task_id, "doing")
+                st.experimental_rerun()
+            if st.button("❌ Delete", key=f"done_delete_{task_id}"):
+                delete_task(task_id)
+                st.experimental_rerun()
