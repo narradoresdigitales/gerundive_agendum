@@ -54,11 +54,28 @@ user_id = st.session_state.user_id
 # Header
 # --------------------------------------------------
 
-st.title(f"workflow — {user_id}")
-
+# Header
+st.title(f"Sil-workflow — {user_id}")
+st.write("")  # small space
+st.write("")  # extra space
 if st.button("Logout"):
     st.session_state.user_id = None
     st.rerun()
+
+st.write("")  # space before Add Task section
+st.subheader("Add Task")
+st.write("")  # space between header and input
+new_task = st.text_input("Task name", placeholder="Enter new task...")
+
+st.write("")  # space between input and button
+if st.button("Add Task"):
+    if new_task.strip():
+        add_task(new_task.strip(), user_id)
+        st.rerun()
+
+st.divider()
+st.write("")  # extra space before columns
+
 
 # --------------------------------------------------
 # Add Task Section
