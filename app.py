@@ -112,7 +112,7 @@ with main_container.container():
             b1, b2 = st.columns(2)
             with b1:
                 if st.button("➡ Start", key=f"todo_start_{task_id}", use_container_width=True):
-                    update_status(task_id, "doing")
+                    update_status(task_id, "in progress ... ")
                     st.rerun()
             with b2:
                 if st.button("❌ Delete", key=f"todo_del_{task_id}", use_container_width=True):
@@ -122,12 +122,12 @@ with main_container.container():
     # Doing
     with col_doing:
         st.markdown('<div class="column-header">⚡ In progress ... </div>', unsafe_allow_html=True)
-        tasks = get_tasks("In_progress", user_id)
+        tasks = get_tasks("done", user_id)
         for task_id, title in tasks:
             st.markdown(f'<div class="task-card">{title}</div>', unsafe_allow_html=True)
             b1, b2 = st.columns(2)
             with b1:
-                if st.button("✓ Done", key=f"In_progress_done_{task_id}", use_container_width=True):
+                if st.button("✓ Done", key=f"_done_{task_id}", use_container_width=True):
                     update_status(task_id, "done")
                     st.rerun()
             with b2:
