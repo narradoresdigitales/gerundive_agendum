@@ -1,90 +1,148 @@
 import streamlit as st
-import json
-import os
+from database import (
+    init_db,
+    add_task,
+    get_tasks,
+    update_status,
+    delete_task
+)
 
-DATA_FILE = "data.json"
+st.set_page_config(
+    page_title="Sil-workflow",
+    layout="wide"
+)
 
-# -------------------------
-# Utilities
-# -------------------------
+init_db()
 
-def load_data():
-    if not os.path.exists(DATA_FILE):
-        return {"todo": [], "doing": [], "done": []}
-    with open(DATA_FILE, "r") as f:
-        return json.load(f)
+# ------------------------------
+# User Session
+# ------------------------------
 
-def save_data(data):
-    with open(DATA_FILE, "w") as f:
-        json.dump(data, f, indent=4)
+if "user_id" not in st.session_state:
+    st.session_state.user_id = None
 
-def move_task(data, task, source, destination):
-    data[source].remove(task)
-    data[destination].append(task)
-    save_data(data)
+if st.session_state.user_id is None:
+    st.title("Sil-workflow")
+    username = st.text_input("Enter your username")
 
-def delete_task(data, task, column):
-    data[column].remove(task)
-    save_data(data)
+    if st.button("Enter"):
+        if username.strip():
+            st.session_state.user_id = username.strip()
+            st.rerun()
+    st.stop()
 
-# -------------------------
-# App UI
-# -------------------------
+user_id = st.session_state.user_id
 
-st.title("My Kanban Board")
+# ------------------------------
+# Styling
+# ------------------------------
 
-data = load_data()
+st.markdown("""
+    <style>
+    .stApp {
+        background-color: #f4f6f8;
+    }
+    .column-container {
+        background-color: #e9edf2;
+        padding: 20px;
+        border-radius: 10px;
+        min-height: 500px;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
-# Add new task
+# ------------------------------
+# Header
+# ------------------------------
+
+st.title(f"Sil-workflow — {user_id}")
+
+if st.button("Logout"):
+    st.session_state.user_id = None
+    st.rerun()
+
+# ------------------------------
+# Add Task
+# ------------------------------
+
 st.subheader("Add Task")
 new_task = st.text_input("Task name")
 
-if st.button("Add"):
-    if new_task.strip() != "":
-        data["todo"].append(new_task.strip())
-        save_data(data)
+if st.button("Add Task"):
+    if new_task.strip():
+        add_task(new_task.strip(), user_id)
         st.rerun()
 
 st.divider()
 
+# ------------------------------
 # Columns
+# ------------------------------
+
 col1, col2, col3 = st.columns(3)
 
-# ---- TO DO ----
+# --- TO DO ---
 with col1:
+    st.markdown('<div class="column-container">', unsafe_allow_html=True)
     st.header("To Do")
-    for task in data["todo"]:
-        st.write(task)
-        if st.button(f"➡ Move to Doing", key=f"todo_{task}"):
-            move_task(data, task, "todo", "doing")
+
+    tasks = get_tasks("todo", user_id)
+
+    for task_id, title in tasks:
+        st.write(title)
+
+        if st.button("➡ Move to Doing", key=f"todo_move_{task_id}"):
+            update_status(task_id, "doing")
             st.rerun()
-        if st.button(f"❌ Delete", key=f"del_todo_{task}"):
-            delete_task(data, task, "todo")
+
+        if st.button("❌ Delete", key=f"todo_delete_{task_id}"):
+            delete_task(task_id)
             st.rerun()
+
         st.divider()
 
-# ---- DOING ----
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# --- DOING ---
 with col2:
+    st.markdown('<div class="column-container">', unsafe_allow_html=True)
     st.header("Doing")
-    for task in data["doing"]:
-        st.write(task)
-        if st.button(f"➡ Move to Done", key=f"doing_{task}"):
-            move_task(data, task, "doing", "done")
+
+    tasks = get_tasks("doing", user_id)
+
+    for task_id, title in tasks:
+        st.write(title)
+
+        if st.button("➡ Move to Done", key=f"doing_move_{task_id}"):
+            update_status(task_id, "done")
             st.rerun()
-        if st.button(f"❌ Delete", key=f"del_doing_{task}"):
-            delete_task(data, task, "doing")
+
+        if st.button("❌ Delete", key=f"doing_delete_{task_id}"):
+            delete_task(task_id)
             st.rerun()
+
         st.divider()
 
-# ---- DONE ----
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# --- DONE ---
 with col3:
+    st.markdown('<div class="column-container">', unsafe_allow_html=True)
     st.header("Done")
-    for task in data["done"]:
-        st.write(task)
-        if st.button(f"⬅ Move to Doing", key=f"done_{task}"):
-            move_task(data, task, "done", "doing")
+
+    tasks = get_tasks("done", user_id)
+
+    for task_id, title in tasks:
+        st.write(title)
+
+        if st.button("⬅ Move to Doing", key=f"done_move_{task_id}"):
+            update_status(task_id, "doing")
             st.rerun()
-        if st.button(f"❌ Delete", key=f"del_done_{task}"):
-            delete_task(data, task, "done")
+
+        if st.button("❌ Delete", key=f"done_delete_{task_id}"):
+            delete_task(task_id)
             st.rerun()
+
         st.divider()
+
+    st.markdown('</div>', unsafe_allow_html=True)
