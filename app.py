@@ -48,8 +48,6 @@ main_container = st.empty()
 # -------------------------
 if "user_id" not in st.session_state:
     st.session_state.user_id = None
-if "refresh" not in st.session_state:
-    st.session_state.refresh = False
 
 # -------------------------
 # Login Section
@@ -61,7 +59,7 @@ if st.session_state.user_id is None:
         if st.button("Login", key="login_button"):
             if username.strip():
                 st.session_state.user_id = username.strip()
-                st.session_state.refresh = True
+                st.experimental_rerun()
     st.stop()  # stop everything else until logged in
 
 # -------------------------
@@ -75,18 +73,22 @@ with main_container.container():
     st.write("")
     if st.button("Logout", key="logout_button"):
         st.session_state.user_id = None
-        st.session_state.refresh = True
+        st.experimental_rerun()
 
     st.write("")
     st.subheader("Add Task")
     st.write("")
 
     # Add Task Input
-    new_task = st.text_input("Task name", key="add_task_input", placeholder="Enter new task...")
+    new_task = st.text_input(
+        "Task name",
+        key="add_task_input",
+        placeholder="Enter new task..."
+    )
     if st.button("Add Task", key="add_task_button"):
         if new_task.strip():
             add_task(new_task.strip(), user_id)
-            st.session_state.refresh = True
+            st.experimental_rerun()  # safe rerun
 
     st.divider()
     st.write("")
@@ -104,11 +106,11 @@ with main_container.container():
             with cols[0]:
                 if st.button("➡ Doing", key=f"todo_move_{task_id}"):
                     update_status(task_id, "doing")
-                    st.session_state.refresh = True
+                    st.experimental_rerun()
             with cols[1]:
                 if st.button("❌ Delete", key=f"todo_delete_{task_id}"):
                     delete_task(task_id)
-                    st.session_state.refresh = True
+                    st.experimental_rerun()
 
     # --- DOING ---
     with col2:
@@ -120,11 +122,11 @@ with main_container.container():
             with cols[0]:
                 if st.button("➡ Done", key=f"doing_move_{task_id}"):
                     update_status(task_id, "done")
-                    st.session_state.refresh = True
+                    st.experimental_rerun()
             with cols[1]:
                 if st.button("❌ Delete", key=f"doing_delete_{task_id}"):
                     delete_task(task_id)
-                    st.session_state.refresh = True
+                    st.experimental_rerun()
 
     # --- DONE ---
     with col3:
@@ -136,15 +138,8 @@ with main_container.container():
             with cols[0]:
                 if st.button("⬅ Doing", key=f"done_move_{task_id}"):
                     update_status(task_id, "doing")
-                    st.session_state.refresh = True
+                    st.experimental_rerun()
             with cols[1]:
                 if st.button("❌ Delete", key=f"done_delete_{task_id}"):
                     delete_task(task_id)
-                    st.session_state.refresh = True
-
-# -------------------------
-# Single Rerun After Any Action
-# -------------------------
-if st.session_state.refresh:
-    st.session_state.refresh = False
-    st.experimental_rerun()
+                    st.experimental_rerun()
