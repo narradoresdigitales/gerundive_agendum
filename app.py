@@ -12,7 +12,7 @@ from database import (
 # --------------------------------------------------
 
 st.set_page_config(
-    page_title="Sil-workflow",
+    page_title="workflow",
     layout="wide"
 )
 
