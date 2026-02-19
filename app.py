@@ -10,7 +10,7 @@ from database import (
 # ─────────────────────────────────────────────────────────────
 # Page Setup
 # ─────────────────────────────────────────────────────────────
-st.set_page_config(page_title="Sil-workflow", layout="wide")
+st.set_page_config(page_title="Workflow", layout="wide")
 init_db()
 
 # ─────────────────────────────────────────────────────────────
@@ -54,7 +54,7 @@ main_container = st.empty()
 # ─────────────────────────────────────────────────────────────
 if st.session_state.user_id is None:
     with login_container.container():
-        st.title("Sil-workflow")
+        st.title("Workflow")
         username = st.text_input("Username", placeholder="Enter your username...")
         if st.button("Login", type="primary"):
             cleaned = username.strip()
